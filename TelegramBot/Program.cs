@@ -3,6 +3,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using TelegramBot;
 using TelegramBot.Services;
+using TelegramBot.Scenarios;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 var token = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
@@ -20,7 +21,9 @@ try
     var bot = new TelegramBotClient(token);
     var userService = new UserService();
     var toDoService = new ToDoService();
-    var handler = new UpdateHandler(bot, userService, toDoService);
+    var contextRepository = new InMemoryScenarioContextRepository();
+    IScenario[] scenarios = { new AddTaskScenario(userService, toDoService) };
+    var handler = new UpdateHandler(bot, userService, toDoService, scenarios, contextRepository);
     var me = await bot.GetMe(cts.Token);
     Console.WriteLine($"Бот @{me.Username} запущен. Остановка: Ctrl+C.");
     await bot.ReceiveAsync(handler.HandleUpdateAsync,

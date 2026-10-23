@@ -3,6 +3,8 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramBot.Models;
 using TelegramBot.Services;
+using TelegramBot.Scenarios;
+using System.Globalization;
 
 namespace TelegramBot;
 
@@ -11,12 +13,17 @@ public sealed class UpdateHandler
     private readonly ITelegramBotClient _bot;
     private readonly IUserService _userService;
     private readonly IToDoService _toDoService;
+    private readonly IReadOnlyList<IScenario> _scenarios;
+    private readonly IScenarioContextRepository _contextRepository;
 
-    public UpdateHandler(ITelegramBotClient bot, IUserService userService, IToDoService toDoService)
+    public UpdateHandler(ITelegramBotClient bot, IUserService userService, IToDoService toDoService,
+        IEnumerable<IScenario> scenarios, IScenarioContextRepository contextRepository)
     {
         _bot = bot;
         _userService = userService;
         _toDoService = toDoService;
+        _scenarios = scenarios.ToArray();
+        _contextRepository = contextRepository;
     }
 
     public async Task HandleUpdateAsync(ITelegramBotClient bot, Update update, CancellationToken ct)
@@ -27,8 +34,21 @@ public sealed class UpdateHandler
 
         var text = message.Text?.Trim() ?? "";
         var parts = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        var command = parts.FirstOrDefault()?.ToLowerInvariant() ?? "";
+        var command = parts.FirstOrDefault()?.Split('@')[0].ToLowerInvariant() ?? "";
         var argument = parts.Length > 1 ? parts[1].Trim() : "";
+
+        var context = await _contextRepository.GetContext(sender.Id, ct);
+        if (command == "/cancel")
+        {
+            await _contextRepository.ResetContext(sender.Id, ct);
+            await Reply(message.Chat.Id, context is null ? "Нет активного сценария." : "Текущий сценарий отменён.", ct);
+            return;
+        }
+        if (context is not null)
+        {
+            await ProcessScenario(context, update, ct);
+            return;
+        }
 
         if (command == "/start")
         {
@@ -38,7 +58,7 @@ public sealed class UpdateHandler
         }
         if (command == "/help")
         {
-            await Reply(message.Chat.Id, "/start - регистрация\n/addtask <название> - добавить задачу\n/showtasks - активные задачи\n/showalltasks - все задачи\n/completetask <id> - завершить\n/removetask <id> - удалить\n/report - статистика", ct);
+            await Reply(message.Chat.Id, "/start - регистрация\n/addtask - создание задачи: название, затем срок dd.MM.yyyy\n/cancel - отмена текущего сценария\n/showtask или /showtasks - активные задачи\n/showalltasks - все задачи\n/completetask <id> - завершить\n/removetask <id> - удалить\n/report - статистика\n/help - справка\nВо время создания задачи введите запрошенное значение или /cancel.", ct);
             return;
         }
 
@@ -52,13 +72,8 @@ public sealed class UpdateHandler
         switch (command)
         {
             case "/addtask":
-                if (string.IsNullOrWhiteSpace(argument) || argument.Length > ToDoService.MaxNameLength)
-                    await Reply(message.Chat.Id, "Укажите название после /addtask (от 1 до 128 символов).", ct);
-                else
-                {
-                    var item = await _toDoService.Add(user, argument, ct);
-                    await Reply(message.Chat.Id, $"Задача {item.Name} успешно добавлена.", ct);
-                }
+                var newContext = new ScenarioContext(ScenarioType.AddTask) { UserId = sender.Id };
+                await ProcessScenario(newContext, update, ct);
                 break;
             case "/showtask":
             case "/showtasks":
@@ -101,7 +116,26 @@ public sealed class UpdateHandler
             return;
         }
         foreach (var item in filtered)
-            await Reply(chatId, $"{item.Name}\nСтатус: {(item.State == ToDoItemState.Active ? "Активна" : "Завершена")}\nID: {item.Id}", ct);
+            await Reply(chatId, $"{item.Name}\nСрок: {item.Deadline.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)}\nСтатус: {(item.State == ToDoItemState.Active ? "Активна" : "Завершена")}\nID: {item.Id}", ct);
+    }
+
+    public IScenario GetScenario(ScenarioType scenario) =>
+        _scenarios.FirstOrDefault(x => x.CanHandle(scenario))
+        ?? throw new InvalidOperationException($"Обработчик сценария {scenario} не найден.");
+
+    public async Task ProcessScenario(ScenarioContext context, Update update, CancellationToken ct)
+    {
+        var scenario = GetScenario(context.CurrentScenario);
+        var result = await scenario.HandleMessageAsync(_bot, context, update, ct);
+        if (result == ScenarioResult.Completed)
+        {
+            await _contextRepository.ResetContext(context.UserId, ct);
+            await Reply(update.Message!.Chat.Id, "Выберите следующую команду:", ct);
+        }
+        else
+        {
+            await _contextRepository.SetContext(context.UserId, context, ct);
+        }
     }
 
     private Task Reply(long chatId, string text, CancellationToken ct) =>

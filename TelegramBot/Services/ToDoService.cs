@@ -8,14 +8,14 @@ public sealed class ToDoService : IToDoService
     private readonly Dictionary<Guid, ToDoItem> _items = new();
     private readonly object _sync = new();
 
-    public Task<ToDoItem> Add(ToDoUser user, string name, CancellationToken ct)
+    public Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(user);
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxNameLength)
             throw new ArgumentException($"Название должно содержать от 1 до {MaxNameLength} символов.", nameof(name));
 
-        var item = new ToDoItem { User = user, Name = name.Trim() };
+        var item = new ToDoItem { User = user, Name = name.Trim(), Deadline = deadline.Date };
         lock (_sync) _items.Add(item.Id, item);
         return Task.FromResult(item);
     }

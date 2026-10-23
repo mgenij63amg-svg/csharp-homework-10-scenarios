@@ -88,22 +88,14 @@ dotnet test -c Release
 
 ## Отправка на проверку
 
-По [правилам курса](https://github.com/OTUS-NET/C-Sharp-Basic/blob/main/Homeworks/README.md) сдаётся ссылка на Pull Request или Merge Request. Рядом с каталогом исходников находится `ToDoBot.bundle` с двумя локальными ветками: `main` содержит базового бота, `feature/homework-10-scenarios` - изменения этой домашней работы. Чтобы сохранить разделение веток, восстановите репозиторий из bundle в новый каталог:
+По [правилам курса](https://github.com/OTUS-NET/C-Sharp-Basic/blob/main/Homeworks/README.md) сдаётся ссылка на Pull Request или Merge Request.
 
-```powershell
-git clone --branch main ToDoBot.bundle ToDoBotRepo
-cd ToDoBotRepo
-git switch --track origin/feature/homework-10-scenarios
-$repoUrl = Read-Host 'URL вашего пустого удалённого репозитория'
-git remote set-url origin $repoUrl
-git push -u origin main
-git push -u origin feature/homework-10-scenarios
-```
+Работа находится в [репозитории csharp-homework-10-scenarios](https://github.com/mgenij63amg-svg/csharp-homework-10-scenarios). Ветка `main` содержит базовую версию бота. Ветка `feature/homework-10-scenarios` содержит сценарии, сроки задач, отмену диалога и тесты. Для просмотра реализации и запуска нужно выбрать ветку домашней работы.
 
-Создайте Pull Request из `feature/homework-10-scenarios` в `main` и отправьте его ссылку преподавателю. Слияние выполняется после принятия работы. Для обычного запуска восстановление Git не требуется - достаточно каталога исходников.
+Pull Request направлен из `feature/homework-10-scenarios` в `main`. Его ссылку следует отправить преподавателю. Слияние выполняется после принятия работы.
 
-Описание для Pull Request:
+Репозиторий закрытый. Для проверки преподавателю нужен доступ к репозиторию по его GitHub-логину и принятие приглашения.
 
-> Добавлена поддержка пользовательских сценариев с промежуточным состоянием в Dictionary. Команда /addtask запрашивает название и срок задачи; /cancel прерывает диалог и возвращает меню. Неверная дата повторно запрашивается без потери названия. Обновлены /help, клавиатуры, модель ToDoItem и IToDoService.Add. Добавлены автоматические проверки диалогов и изоляции пользователей.
+Проект создан с нуля; исходников предыдущих домашних работ не было. Базовый бот сохранён в `main`, чтобы изменения задания можно было просмотреть отдельно.
 
 Условия работы: [задание 10 Сценарии](https://github.com/OTUS-NET/C-Sharp-Basic/blob/main/Homeworks/10%20%D0%A1%D1%86%D0%B5%D0%BD%D0%B0%D1%80%D0%B8%D0%B8/Task.md).

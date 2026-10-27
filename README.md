@@ -98,3 +98,5 @@ dotnet test -c Release
 По [правилам курса](https://github.com/OTUS-NET/C-Sharp-Basic/blob/main/Homeworks/README.md) сдаётся ссылка на Pull Request.
 
 Основа - предыдущая работа 10 из ветки feature/homework-10-scenarios. Изменения работы 11 находятся в feature/homework-11-lists. Для отдельного просмотра изменений PR направляется в ветку предыдущей работы: она пока не слита в main. Предыдущий PR не изменяется и автоматически не сливается.
+
+Ссылка для сдачи: [Pull Request домашней работы 11](https://github.com/mgenij63amg-svg/csharp-homework-10-scenarios/pull/2).
